@@ -3,7 +3,7 @@ name: Deploy to AWS S3 & CloudFront
 on:
   push:
     branches:
-      - main # Triggers when you push to the main branch
+      - main
 
 permissions:
   contents: read
@@ -16,21 +16,22 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 4. Configure AWS Credentials
+      # 2. Configure AWS Credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1 # Ensure this matches your bucket region 
+          aws-region: us-east-1
 
-      # 5. Upload to S3
+      # 3. Upload to S3 (Corrected)
       - name: Deploy to S3
         run: |
-          # Sync dist folder to S3, deleting old files that no longer exist
-          aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET }} --delete
+          # Sync current folder (.) to S3
+          # Exclude .git and .github to keep the bucket clean
+          aws s3 sync . s3://${{ secrets.AWS_S3_BUCKET }} --delete --exclude ".git/*" --exclude ".github/*" --exclude ".gitignore"
 
-      # 6. Invalidate CloudFront Cache (So updates show immediately)
+      # 4. Invalidate CloudFront Cache
       - name: Invalidate CloudFront
         run: |
           aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DIST_ID }} --paths "/*"
