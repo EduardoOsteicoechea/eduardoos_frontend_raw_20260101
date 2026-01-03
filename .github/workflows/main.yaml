@@ -16,7 +16,22 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. Configure AWS Credentials
+      # 2. Setup Node.js (Required to run html-minifier)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 3. Minify HTML (New Step)
+      - name: Minify HTML
+        run: |
+          # Install the tool globally
+          npm install -g html-minifier
+          
+          # Run the command you provided
+          html-minifier --collapse-whitespace --remove-comments --minify-css true --minify-js true --output index.html index.base.html
+
+      # 4. Configure AWS Credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -24,14 +39,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # 3. Upload to S3 (Corrected)
+      # 5. Upload to S3
       - name: Deploy to S3
         run: |
           # Sync current folder (.) to S3
-          # Exclude .git and .github to keep the bucket clean
-          aws s3 sync . s3://${{ secrets.AWS_S3_BUCKET }} --delete --exclude ".git/*" --exclude ".github/*" --exclude ".gitignore"
+          # Exclude source file and git folders so only the clean index.html goes up
+          aws s3 sync . s3://${{ secrets.AWS_S3_BUCKET }} --delete --exclude ".git/*" --exclude ".github/*" --exclude ".gitignore" --exclude "index.base.html"
 
-      # 4. Invalidate CloudFront Cache
-      - name: Invalidate CloudFront 
+      # 6. Invalidate CloudFront Cache
+      - name: Invalidate CloudFront
         run: |
           aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DIST_ID }} --paths "/*"
